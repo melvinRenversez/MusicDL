@@ -3,11 +3,12 @@ import re
 import json
 import subprocess
 import sys
+import glob
 from googleapiclient.discovery import build
 
 api_key = 'AIzaSyBIUhbqCYtcoIDxc1BmNqt9TXTpODE_bKM'
 youtube = build("youtube", "v3", developerKey=api_key)
-path = "links.txt"
+path = "C:\MesScripts/links.txt"
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -27,7 +28,6 @@ MEMORY = []
 def main():
     run = True
     help()
-    memory()
     while run:
         try:
             print(f"{MAGENTA}[*]══╗ # ", end="")
@@ -41,14 +41,13 @@ def main():
             match cmd:
                 case "quit":
                     run = False
+                    print(f"{WHITE}")
                 case "memory":
                     memory()
                 case "rm_memory":
                     rm_memory(arg)
                 case "help":
                     help()
-                case "remove":
-                    remove(arg)
                 case "clear":
                     clear()
                 case "search":
@@ -59,6 +58,8 @@ def main():
                     get(arg)
                 case "install":
                     install(arg)
+                case "ll":
+                    ll()
                 case _:
                     read("Invalid Command", RED)
         except Exception as e:
@@ -72,10 +73,11 @@ def help():
         read(f"{'clear':<20} Clear Screen", MAGENTA)
         read(f"{'memory':<20} Show All Links In Memory", MAGENTA)
         read(f"{'rm_memory':<20} Remove Link By ID", MAGENTA)
-        read(f"{'remove <id>':<20} Remove Link With ID", MAGENTA)
         read(f"{'search <title>':<20} Search Music On YouTube", MAGENTA)
         read(f"{'ram':<20} Show All Ram", MAGENTA)
         read(f"{'get <id>':<20} Add Music To MEMORY By ID", MAGENTA)
+        read(f"{'install <id>':<20} Download Music By ID In Memory", MAGENTA)
+        read(f"{'ll':<20} List All .mp3", MAGENTA)
         read(f"{'quit':<20} Quit The Program", MAGENTA)
         read("═" * 40, MAGENTA)
     except Exception as e:
@@ -122,6 +124,14 @@ def install(arg):
     except Exception as e:
         read(f"Error in install: {e}", RED)
 
+def ll():
+    mp3_files = glob.glob('*.mp3')
+
+    # Afficher tous les fichiers .mp3 trouvés
+    for file in mp3_files:
+        print(file)
+
+
 def download(url):
     try:
         read(f"[*] Starting download from {url}", YELLOW)
@@ -133,13 +143,23 @@ def download(url):
             "--no-mtime", "--no-write-thumbnail", "--no-write-sub", "--no-write-info-json", "--no-check-certificate",
             "--prefer-free-formats", url
         ]
-        
-        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        read(f"Download completed successfully! Output: {result.stdout.strip()}", GREEN)
-    except subprocess.CalledProcessError as e:
-        read(f"Error: Failed to download the video. {e.stderr.strip()}", RED)
+
+        # Lance yt-dlp et lit la sortie en direct
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+        for line in process.stdout:
+            read(line.strip(), BLUE)  # La couleur du texte du téléchargement ici
+
+        process.wait()
+
+        if process.returncode != 0:
+            read(f"Error: Download failed with code {process.returncode}", RED)
+        else:
+            read(f"Download Finish ", GREEN)
+
     except Exception as e:
         read(f"Unexpected error in download: {e}", RED)
+
 
 def check_yt_dlp():
     try:
@@ -214,7 +234,7 @@ def memory():
         with open(path, "r") as f:
             links = json.loads(f.read())
 
-        read(f"{'ID':<10} {'Link':<50} {"duration":<10}", MAGENTA)
+        read(f"{'ID':<10} {'Link':<50} {'Duration':<10}", MAGENTA)
         read("═" * 72, GREEN)
 
         for i, link in enumerate(links):
@@ -264,32 +284,6 @@ def updateMEMORY():
     except Exception as e:
         read(f"Erreur lors de la mise à jour du fichier mémoire : {e}", RED)
 
-def remove(id):
-    try:
-        id = int(id) - 1
-    except ValueError:
-        read("ID is not a valid number", RED)
-        return
-
-    try:
-        with open("link.txt", "r") as f:
-            links = f.readlines()
-
-        if 0 <= id < len(links):
-            read(f"Are you sure you want to remove the link: {links[id].strip()}? (yes/no)", YELLOW)
-            confirm = input().strip().lower()
-
-            if confirm == "yes":
-                del links[id]
-                with open("link.txt", "w") as f:
-                    f.writelines(links)
-                read("Link removed successfully.", GREEN)
-            else:
-                read("Removal canceled.", GREEN)
-        else:
-            read("Invalid ID.", RED)
-    except Exception as e:
-        read(f"Error in remove: {e}", RED)
 
 def resetRAM():
     global RAM
@@ -301,7 +295,7 @@ def addToRAM(inf):
 def readRAM():
     try:
         if RAM:
-               read(f"{"ID":<10} {"name":<50} {"duration":<10}", MAGENTA)
+               read(f"{'ID':<10} {'name':<50} {'Duration':<10}", MAGENTA)
                read("═" * 72, GREEN)
                for i, inf in enumerate(RAM):
                     title = inf['title']
