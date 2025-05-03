@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 
 api_key = 'AIzaSyBIUhbqCYtcoIDxc1BmNqt9TXTpODE_bKM'
 youtube = build("youtube", "v3", developerKey=api_key)
-path = "C:\MesScripts/links.txt"
+path = "links.txt"
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -37,6 +37,8 @@ def main():
             t1 = re.findall(r'\"([^\"]+)\"|\S+', ipt)[1] if len(re.findall(r'\"([^\"]+)\"|\S+', ipt)) > 1 else None
             t2 = ipt.split(" ")[1] if len(ipt.split(" ")) > 1 else None
             arg = t1 if t1 else t2
+            
+            print(arg)
 
             match cmd:
                 case "quit":
@@ -309,12 +311,16 @@ def readRAM():
         read(f"Error in readRAM: {e}", RED)
 
 def parse_duration(duration):
-    match = re.match(r'PT(\d+H)?(\d+M)?(\d+S)?', duration)
-    hours, minutes, seconds = match.groups()
+    if not duration:
+        return "00:00:00"
 
-    hours = int(hours[:-1]) if hours else 0
-    minutes = int(minutes[:-1]) if minutes else 0
-    seconds = int(seconds[:-1]) if seconds else 0
+    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration)
+    if not match:
+        return "00:00:00"
+
+    hours = int(match.group(1)) if match.group(1) else 0
+    minutes = int(match.group(2)) if match.group(2) else 0
+    seconds = int(match.group(3)) if match.group(3) else 0
 
     return f"{hours:02}:{minutes:02}:{seconds:02}"
 
